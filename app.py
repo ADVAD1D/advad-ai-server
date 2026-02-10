@@ -17,6 +17,7 @@ def get_real_ip():
 
 #Rate limiter
 limiter = Limiter(app=app, key_func=get_real_ip, storage_uri="memory://")
+#the memory storage is for save the rate limit data
 
 #logs
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +28,7 @@ load_dotenv()
 CORS(app)
 
 API_KEY = os.getenv("GEMINI_API_KEY")
+APP_TOKEN = os.getenv("APP_TOKEN")
 
 if not API_KEY:
     # Esto es mejor imprimirlo en consola que lanzar raise error para que Render no crashee en el build
@@ -57,6 +59,13 @@ def home():
 @limiter.limit("10 per minute")
 
 def ask_ai():
+
+    auth_header = request.headers.get("X-App-token")
+    if auth_header != APP_TOKEN:
+        return jsonify({
+            "error": "Access denied"
+        }), 403 #Forbidden
+    
     if not API_KEY:
         return jsonify({"error": "GEMINI_API_KEY environment variable not set"}), 500
     
