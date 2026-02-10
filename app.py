@@ -22,6 +22,11 @@ model = genai.GenerativeModel("gemini-2.5-flash",
                               system_instruction="Eres una inteligencia artificial de entrenamiento para soldados espaciales"
                               "responde a los soldados de la organización y exígeles lo mejor de ellos mismos.")
 
+@app.route("/", methods=["GET"])
+
+def home():
+    return "Advad AI Server is running!", 200 #OK
+
 @app.route("/askai", methods=["POST"])
 
 def ask_ai():
@@ -33,7 +38,7 @@ def ask_ai():
         prompt = data.get("prompt", "")
 
         if not prompt:
-            return jsonify({"error": "Prompt is required"}), 400
+            return jsonify({"error": "Prompt is required"}), 400 #Bad Request
         
         response = model.generate_content(prompt)
 
@@ -45,6 +50,9 @@ def ask_ai():
     #prueba local
     #Invoke-RestMethod -Uri "http://localhost:10000/askai" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"prompt": "Señor, reporte de situación."}'
     #curl -X POST http://localhost:10000/askai \-H "Content-Type: application/json" \-d '{"prompt": "Señor, solicito instrucciones."}'
-    
+
+
+#configuration for render    
 if __name__ == "__main__":
+    #render uses unicorn, recomended in port 10000
     app.run(host="0.0.0.0", port=10000)
