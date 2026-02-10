@@ -1,11 +1,22 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
 import os
+import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+#Init flask app
 app = Flask(__name__)
 
+#Rate limiter
+limiter = Limiter(app, key_func=lambda: request.remote_addr)
+
+#logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+#env config
 load_dotenv()
 CORS(app)
 
@@ -25,9 +36,11 @@ model = genai.GenerativeModel("gemini-2.5-flash",
 @app.route("/", methods=["GET"])
 
 def home():
+    logger.info("Home endpoint accessed")
     return "Advad AI Server is running!", 200 #OK
 
 @app.route("/askai", methods=["POST"])
+@limiter.limit("10 per minute")
 
 def ask_ai():
     if not API_KEY:
