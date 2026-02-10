@@ -6,6 +6,8 @@ import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+#advad server for api llm in the game
+
 #Init flask app
 app = Flask(__name__)
 
@@ -90,5 +92,5 @@ def ask_ai():
 
 #configuration for render    
 if __name__ == "__main__":
-    #render uses unicorn, recomended in port 10000
+    #render uses gunicorn, recomended in port 10000
     app.run(host="0.0.0.0", port=10000)
