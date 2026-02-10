@@ -9,8 +9,14 @@ from dotenv import load_dotenv
 #Init flask app
 app = Flask(__name__)
 
+def get_real_ip():
+    if request.headers.getlist("X-Forwarded-For"):
+        return request.headers.getlist("X-Forwarded-For")[0]
+    else:
+        return request.remote_addr
+
 #Rate limiter
-limiter = Limiter(app, key_func=lambda: request.remote_addr)
+limiter = Limiter(app=app, key_func=get_real_ip, storage_uri="memory://")
 
 #logs
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +38,14 @@ else:
 model = genai.GenerativeModel("gemini-2.5-flash",
                               system_instruction="Eres una inteligencia artificial de entrenamiento para soldados espaciales"
                               "responde a los soldados de la organización y exígeles lo mejor de ellos mismos.")
+
+@app.errorhandler(429)
+
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Rate limit exceeded",
+        "message": "Has enviado muchos mensajes, espera un momento soldado."
+    }), 429
 
 @app.route("/", methods=["GET"])
 
