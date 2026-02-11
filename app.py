@@ -62,7 +62,7 @@ def home():
 
 def ask_ai():
 
-    auth_header = request.headers.get("X-App-token")
+    auth_header = request.headers.get("X-App-Token")
     if auth_header != APP_TOKEN:
         return jsonify({
             "error": "Access denied"
