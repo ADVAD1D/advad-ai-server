@@ -41,7 +41,9 @@ else:
 
 model = genai.GenerativeModel("gemini-2.5-flash",
                               system_instruction="Eres una inteligencia artificial de entrenamiento para soldados espaciales"
-                              "responde a los soldados de la organización y exígeles lo mejor de ellos mismos.")
+                              "responde a los soldados de la organización y exígeles lo mejor de ellos mismos."
+                              "Dale instrucciones a los jugadores sobre controles si preguntan: te mueves con awsd o con las flechas"
+                              "disparas con barra espaciadora, haces dash con la tecla e")
 
 @app.errorhandler(429)
 
