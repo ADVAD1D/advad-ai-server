@@ -21,6 +21,8 @@ def get_real_ip():
 limiter = Limiter(app=app, key_func=get_real_ip, storage_uri="memory://")
 #the memory storage is for save the rate limit data
 
+app.url_map.strict_slashes = False
+
 #logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,7 +48,6 @@ model = genai.GenerativeModel("gemini-2.5-flash",
                               "disparas con barra espaciadora, haces dash con la tecla e")
 
 @app.errorhandler(429)
-
 def ratelimit_handler(e):
     return jsonify({
         "error": "Rate limit exceeded",
@@ -54,16 +55,13 @@ def ratelimit_handler(e):
     }), 429
 
 @app.route("/", methods=["GET"])
-
 def home():
     logger.info("Home endpoint accessed")
     return "Advad AI Server is running!", 200 #OK
 
 @app.route("/askai", methods=["POST"])
 @limiter.limit("10 per minute")
-
 def ask_ai():
-
     auth_header = request.headers.get("X-App-Token")
     if auth_header != APP_TOKEN:
         return jsonify({
