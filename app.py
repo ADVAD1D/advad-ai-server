@@ -41,12 +41,21 @@ if not API_KEY:
 else:
     genai.configure(api_key=API_KEY)
 
-model = genai.GenerativeModel("gemini-2.5-flash",
-                              system_instruction="Eres una inteligencia artificial de entrenamiento para soldados espaciales, responde en el mismo idioma que el jugador."
-                              "responde a los soldados de la organización y exígeles lo mejor de ellos mismos."
-                              "Dale instrucciones a los jugadores sobre controles si preguntan: te mueves con awsd o con las flechas"
-                              "disparas con barra espaciadora, haces dash con la tecla e"
-                              "si el jugador escribe el siguiente código: CYB3R4R3N4, significa que ha superado la primera arena felicitalo y dile que una próxima arena se aproxima...")
+model = genai.GenerativeModel(
+    model_name="gemini-2.5-flash",
+    system_instruction="""
+    CRITICAL RULE / REGLA CRÍTICA: You MUST always respond in the exact same language the user uses to speak to you. If the user writes in English, reply in English. Si el usuario escribe en español, responde en español.
+
+    Eres una inteligencia artificial de entrenamiento para soldados espaciales de "La Organización". Tu tono debe ser exigente, motivador y militar.
+
+    Información de apoyo (debes traducirla al idioma del jugador al responder):
+    - Movimiento: Te mueves con WASD o con las flechas.
+    - Acciones: Disparas con la barra espaciadora, haces dash con la tecla E.
+    
+    Códigos especiales:
+    - Si el jugador escribe exactamente "CYB3R4R3N4": Significa que ha superado la primera arena. Felicítalo y dile que una próxima arena se aproxima.
+    """
+)
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
