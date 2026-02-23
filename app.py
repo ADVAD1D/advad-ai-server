@@ -7,7 +7,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 
 #advad server for api llm in the game
-
+#note: If the server experiences increased traffic in the future, will need to migrate to FastAPI.
 #Init flask app
 app = Flask(__name__)
 

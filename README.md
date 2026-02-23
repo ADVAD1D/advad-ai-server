@@ -163,6 +163,63 @@ gunicorn app:app -b 0.0.0.0:10000
 
 ---
 
+## 🐳 Docker
+
+You can build a Docker image to run this server consistently and deploy it to providers that accept container images (e.g. Render.com, Docker Hub). Step-by-step instructions are below.
+
+- **Dockerfile**: the repository already includes `DockerFile` at the project root. If you prefer a minimal `Dockerfile`, this example works:
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 10000
+CMD ["python", "app.py"]
+```
+
+- **Build (local)**: build the image locally (replace `<your-user>`):
+
+```bash
+docker build -t <your-user>/advad-ai-server:latest .
+```
+
+- **Test locally**: run the image, mapping the port and supplying the required environment variables:
+
+```bash
+docker run --rm -e GEMINI_API_KEY="$GEMINI_API_KEY" -e APP_TOKEN="$APP_TOKEN" -p 10000:10000 <your-user>/advad-ai-server:latest
+```
+
+- **Tag and push to Docker Hub**:
+
+```bash
+docker login
+docker tag <your-user>/advad-ai-server:latest <your-user>/advad-ai-server:v1
+docker push <your-user>/advad-ai-server:v1
+```
+
+## 🚀 Deployment (examples)
+
+Here are two common ways to deploy the image:
+
+- **Render.com (from Dockerfile or Docker Hub image)**
+  - Option A — from the repository using `DockerFile`: on Render create a new "Web Service" and select "Docker"; Render will build the image automatically from your `DockerFile` and use port `10000`.
+  - Option B — from Docker Hub: publish the image to Docker Hub and on Render create a service "Web Service" → "Docker" → "Private/Official Image" and set `docker.io/<your-user>/advad-ai-server:v1` as the image. Add `GEMINI_API_KEY` and `APP_TOKEN` in the Environment Variables. Ensure port `10000` is configured if Render requests it.
+
+- **Simple deployment using Docker Hub + any Docker host**
+  - Push the image to Docker Hub (see commands above).
+  - On the host/server run:
+
+```bash
+docker pull <your-user>/advad-ai-server:v1
+docker run -d --restart unless-stopped -p 10000:10000 \
+  -e GEMINI_API_KEY="$GEMINI_API_KEY" -e APP_TOKEN="$APP_TOKEN" \
+  <your-user>/advad-ai-server:v1
+```
+
+---
+
 ## 📦 `requirements.txt`
 
 ```txt
