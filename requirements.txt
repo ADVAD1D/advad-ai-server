@@ -1,6 +1,7 @@
-Flask
-flask-cors
-Flask-Limiter
+fastapi
+slowapi
+pydantic
 google-generativeai
+uvicorn
 gunicorn
 python-dotenv

@@ -1,27 +1,32 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from flask_limiter import Limiter
+from fastapi import FastAPI, Request, Header
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import os
 import logging
 import google.generativeai as genai
 from dotenv import load_dotenv
+import uvicorn
 
 #advad server for api llm in the game
-#note: If the server experiences increased traffic in the future, will need to migrate to FastAPI.
 #Init flask app
-app = Flask(__name__)
+app = FastAPI()
 
-def get_real_ip():
-    if request.headers.getlist("X-Forwarded-For"):
-        return request.headers.getlist("X-Forwarded-For")[0]
+def get_real_ip(request: Request):
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0]
     else:
-        return request.remote_addr
+        return request.client.host
 
 #Rate limiter
-limiter = Limiter(app=app, key_func=get_real_ip, storage_uri="memory://")
+limiter = Limiter(key_func=get_real_ip, storage_uri="memory://")
 #the memory storage is for save the rate limit data
+app.state.limiter = limiter
 
-app.url_map.strict_slashes = False
+# app.url_map.strict_slashes = False (Nota: FastAPI maneja los slashes finales de forma distinta, pero mantengo el espacio del comentario)
 
 #logs
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +34,14 @@ logger = logging.getLogger(__name__)
 
 #env config
 load_dotenv()
-CORS(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 APP_TOKEN = os.getenv("APP_TOKEN")
@@ -37,7 +49,6 @@ APP_TOKEN = os.getenv("APP_TOKEN")
 if not API_KEY:
     # Esto es mejor imprimirlo en consola que lanzar raise error para que Render no crashee en el build
     print("GEMINI_API_KEY environment variable not set")
-
 else:
     genai.configure(api_key=API_KEY)
 
@@ -57,50 +68,55 @@ model = genai.GenerativeModel(
     """
 )
 
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({
-        "error": "Rate limit exceeded",
-        "message": "Has enviado muchos mensajes, espera un momento soldado."
-    }), 429
+@app.exception_handler(RateLimitExceeded)
+async def ratelimit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "Rate limit exceeded",
+            "message": "Has enviado muchos mensajes, espera un momento soldado."
+        }
+    )
 
-@app.route("/", methods=["GET"])
-def home():
+@app.get("/")
+async def home():
     logger.info("Home endpoint accessed")
-    return "Advad AI Server is running!", 200 #OK
+    # FastAPI puede devolver dicts o strings directo, pero usamos JSONResponse para asegurar el 200 #OK exacto
+    return JSONResponse(content="Advad AI Server is running!", status_code=200) #OK
 
-@app.route("/askai", methods=["POST"])
-@limiter.limit("10 per minute")
-def ask_ai():
-    auth_header = request.headers.get("X-App-Token")
+class AskAIRequest(BaseModel):
+    prompt: str = ""
+
+@app.post("/askai")
+@limiter.limit("10/minute")
+async def ask_ai(request: Request, data: AskAIRequest, x_app_token: str = Header(default=None, alias="X-App-Token")):
+    auth_header = x_app_token
     if auth_header != APP_TOKEN:
-        return jsonify({
+        return JSONResponse(content={
             "error": "Access denied"
-        }), 403 #Forbidden
+        }, status_code=403) #Forbidden
     
     if not API_KEY:
-        return jsonify({"error": "GEMINI_API_KEY environment variable not set"}), 500
+        return JSONResponse(content={"error": "GEMINI_API_KEY environment variable not set"}, status_code=500)
     
     try:
-        data = request.get_json()
-        prompt = data.get("prompt", "")
+        prompt = data.prompt
 
         if not prompt:
-            return jsonify({"error": "Prompt is required"}), 400 #Bad Request
+            return JSONResponse(content={"error": "Prompt is required"}, status_code=400) #Bad Request
         
-        response = model.generate_content(prompt)
+        # Llamada asíncrona a la API de Gemini
+        response = await model.generate_content_async(prompt)
 
-        return jsonify({"response": response.text}), 200 #OK
+        return JSONResponse(content={"response": response.text}, status_code=200) #OK
     
     except Exception as e:
-        return jsonify({"error": str(e)}), 500 #Internal Server Error
+        return JSONResponse(content={"error": str(e)}, status_code=500) #Internal Server Error
 
     #prueba local
     #Invoke-RestMethod -Uri "http://localhost:10000/askai" -Method Post -ContentType "application/json; charset=utf-8" -Body '{"prompt": "Señor, reporte de situación."}'
     #curl -X POST http://localhost:10000/askai \-H "Content-Type: application/json" \-d '{"prompt": "Señor, solicito instrucciones."}'
 
-
 #configuration for render    
 if __name__ == "__main__":
-    #render uses gunicorn, recomended in port 10000
-    app.run(host="0.0.0.0", port=10000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
