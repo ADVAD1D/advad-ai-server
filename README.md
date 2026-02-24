@@ -1,6 +1,6 @@
 # 🪐 Advad‑AI‑Server
 
-A tiny Flask‑based API that proxies requests to Google’s Gemini LLM.  
+A tiny FastAPI-based API that proxies requests to Google’s Gemini LLM.  
 Designed to be embedded in a Godot game so your project can **consume a language‑model API securely and with rate‑limiting**.
 
 > ⚠️ **Security note**  
@@ -13,7 +13,7 @@ Designed to be embedded in a Godot game so your project can **consume a language
 
 ```
 .
-├── app.py            # main Flask application
+├── app.py            # main FastAPI application (uvicorn entrypoint)
 ├── requirements.txt  # Python dependencies
 └── README.md         # this documentation
 ```
@@ -24,7 +24,7 @@ Designed to be embedded in a Godot game so your project can **consume a language
 
 - Single endpoint (`/askai`) to send prompts and receive generated text.
 - Built‑in rate limiting (10 requests/minute per client IP).
-- CORS enabled for cross‑origin calls from your Godot project.
+- CORS enabled for cross‑origin calls from your Godot project (FastAPI middleware).
 - Simple token‑based authentication to prevent unauthorized use.
 - Logging of endpoint hits and errors.
 - Configurable model and system instruction for the Gemini API.
@@ -69,8 +69,10 @@ Designed to be embedded in a Godot game so your project can **consume a language
 
 5. **Run locally**
 
+   For development, run the FastAPI app with Uvicorn:
+
    ```bash
-   python app.py
+   uvicorn app:app --host 0.0.0.0 --port 10000 --reload
    ```
 
    The server listens on `0.0.0.0:10000` by default (Render.com uses this port).
@@ -155,10 +157,10 @@ func _on_response(result, response_code, headers, body):
 ## 🛠 Deployment
 
 The code is compatible with many PaaS providers (Render.com, Heroku, etc.).  
-They usually set environment variables via a dashboard and run `python app.py` or use Gunicorn:
+They usually set environment variables via a dashboard and run Uvicorn or an ASGI server:
 
 ```bash
-gunicorn app:app -b 0.0.0.0:10000
+uvicorn app:app --host 0.0.0.0 --port 10000
 ```
 
 ---
@@ -167,7 +169,7 @@ gunicorn app:app -b 0.0.0.0:10000
 
 You can build a Docker image to run this server consistently and deploy it to providers that accept container images (e.g. Render.com, Docker Hub). Step-by-step instructions are below.
 
-- **Dockerfile**: the repository already includes `DockerFile` at the project root. If you prefer a minimal `Dockerfile`, this example works:
+- **Dockerfile**: the repository already includes `DockerFile` at the project root. If you prefer a minimal `Dockerfile`, this example works (using Uvicorn):
 
 ```dockerfile
 FROM python:3.11-slim
@@ -176,7 +178,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 EXPOSE 10000
-CMD ["python", "app.py"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]
 ```
 
 - **Build (local)**: build the image locally (replace `<your-user>`):
@@ -223,9 +225,9 @@ docker run -d --restart unless-stopped -p 10000:10000 \
 ## 📦 `requirements.txt`
 
 ```txt
-Flask
-flask-cors
-flask-limiter
+fastapi
+uvicorn[standard]
+slowapi
 python-dotenv
 google-generativeai
 ```
@@ -238,7 +240,7 @@ google-generativeai
   Edit the `model = genai.GenerativeModel(...)` block in `app.py`.
 
 - **Adjust rate limiting**  
-  Modify `@limiter.limit("10 per minute")`.
+  Modify the rate limit decorator or configuration in the FastAPI app (e.g. `slowapi` rules).
 
 - **Logging level**  
   Change `logging.basicConfig(level=logging.INFO)` to `DEBUG` for more verbosity.
