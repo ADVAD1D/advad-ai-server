@@ -123,10 +123,10 @@ async def ask_ai(request: Request, data: AskAIRequest, x_app_token: str = Header
             return JSONResponse(content={"error": "Prompt is required"}, status_code=400) #Bad Request
         
         safe_prompt = f"""
-        Comando del soldado de La Organización:
+        Incoming command from The Organization soldier::
         <<<{raw_prompt}>>>
         
-        Evalúa el comando y responde manteniendo tu identidad militar estricta.
+        Evaluate the command and respond maintaining your strict military identity. Remember to reply in the exact same language the soldier used inside the <<< >>> brackets..
         """
         
         # Llamada asíncrona a la API de Gemini
